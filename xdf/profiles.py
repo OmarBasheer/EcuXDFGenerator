@@ -1,6 +1,101 @@
 """ECU profiles with known checksums, sizes, and common table hints."""
 
 ECU_PROFILES = [
+    # ------------------------------------------------------------------
+    # Hyundai / Kia Theta-II — Siemens SIM2k-250  (primary target)
+    # HMC / KMC 2.0 T-GDI and 2.4 GDI engines, ~2011-2019
+    # ------------------------------------------------------------------
+    {
+        "id": "hyundai_theta2_sim2k250",
+        "name": "Hyundai/Kia Theta-II SIM2k-250 1 MB (HMC/KMC)",
+        "binary_sizes": [0x100000],
+        "description": (
+            "Hyundai / Kia Theta-II GDI / T-GDI — Siemens SIM2k-250 1 MB ECU. "
+            "Used in Sonata, Optima, Sorento, Santa Fe, and related HMC/KMC models "
+            "with the 2.0 T-GDI or 2.4 GDI engine."
+        ),
+        "endian": "little",
+        "checksum": {
+            "algorithm": "crc32",
+            "region_start": "0x0",
+            "region_end": "0xFFFC",
+            "storage_address": "0xFFFC",
+            "storage_size": 4,
+        },
+        "default_categories": ["Fuel", "Timing", "Boost", "CVVT", "Idle", "Misc"],
+        "known_tables": [
+            {
+                "title": "Injection Quantity Map",
+                "type": "2d",
+                "description": "Base fuel injection quantity vs RPM / Load (GDI direct injection)",
+                "rows": 16,
+                "cols": 16,
+                "element_size": 16,
+                "units": "ms",
+                "math": "X*0.001",
+                "x_math": "X",
+                "y_math": "X",
+            },
+            {
+                "title": "Ignition Timing Map",
+                "type": "2d",
+                "description": "Base ignition advance vs RPM / Load",
+                "rows": 16,
+                "cols": 16,
+                "element_size": 8,
+                "units": "deg",
+                "math": "X*0.5-64",
+                "x_math": "X",
+                "y_math": "X",
+            },
+            {
+                "title": "Boost Target Map",
+                "type": "2d",
+                "description": "Target boost pressure vs RPM / Throttle (T-GDI turbo variants only)",
+                "rows": 12,
+                "cols": 16,
+                "element_size": 16,
+                "units": "kPa",
+                "math": "X*0.1",
+                "x_math": "X",
+                "y_math": "X",
+            },
+            {
+                "title": "CVVT Intake Target Map",
+                "type": "2d",
+                "description": "Intake CVVT cam-phaser target angle vs RPM / Load",
+                "rows": 10,
+                "cols": 10,
+                "element_size": 8,
+                "units": "deg",
+                "math": "X*1.0",
+                "x_math": "X",
+                "y_math": "X",
+            },
+            {
+                "title": "CVVT Exhaust Target Map",
+                "type": "2d",
+                "description": "Exhaust CVVT cam-phaser target angle vs RPM / Load",
+                "rows": 10,
+                "cols": 10,
+                "element_size": 8,
+                "units": "deg",
+                "math": "X*1.0",
+                "x_math": "X",
+                "y_math": "X",
+            },
+            {
+                "title": "Idle Speed Target",
+                "type": "1d",
+                "description": "Target idle RPM vs coolant temperature",
+                "count": 16,
+                "element_size": 16,
+                "units": "RPM",
+                "math": "X*1.0",
+                "x_math": "X*1.0",
+            },
+        ],
+    },
     {
         "id": "subaru_ej_1mb",
         "name": "Subaru EJ 1MB (WRX / STI)",
