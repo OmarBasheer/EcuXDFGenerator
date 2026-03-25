@@ -25,7 +25,7 @@ class BinaryAnalyzer:
         0x20000:  "Generic 128 KB ECU / Older Honda OBD1",
         0x40000:  "Honda OBD1 256 KB (P28 / P30 / P72)",
         0x80000:  "Honda OBD2 512 KB / Generic 512 KB",
-        0x100000: "Subaru EJ / Mitsubishi EVO / Honda S2000 — 1 MB",
+        0x100000: "Hyundai/Kia Theta-II SIM2k-250 / Subaru EJ / Mitsubishi EVO — 1 MB",
         0x180000: "Mitsubishi / Denso 1.5 MB",
         0x200000: "Modern ECU 2 MB",
         0x400000: "Modern ECU 4 MB",
@@ -82,6 +82,14 @@ class BinaryAnalyzer:
             f"Unknown size — {self.size} bytes (0x{self.size:X} / {self.size // 1024} KB)",
         )
         suggestions: List[str] = []
+
+        # Hyundai/Kia SIM2k-250 signatures
+        for sig in (b"SIM2K", b"SIM2k", b"HMC", b"HYUNDAI", b"MOBIS"):
+            idx = self.data.find(sig)
+            if idx >= 0:
+                suggestions.append(
+                    f"{sig.decode()} string found at 0x{idx:X} — likely Hyundai/Kia SIM2k-250"
+                )
 
         # Subaru/Denso magic constant
         if b"\x5A\xA5\xA5\x5A" in self.data:
@@ -362,8 +370,11 @@ class BinaryAnalyzer:
             hints.append({
                 "address":     0xFFFC,
                 "address_hex": "0xFFFC",
-                "type":        "typical_subaru_1mb",
-                "description": "Typical Subaru 1 MB checksum location (last 4 bytes of lower 64 KB block)",
+                "type":        "typical_1mb",
+                "description": (
+                    "Typical 1 MB checksum location (last 4 bytes of lower 64 KB block) — "
+                    "applies to Subaru EJ, Mitsubishi EVO, and Hyundai/Kia SIM2k-250"
+                ),
             })
         elif self.size == 0x80000:
             hints.append({
