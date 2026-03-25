@@ -1,0 +1,244 @@
+/* ====================================================================
+   ECU XDF Generator — stylesheet
+   ==================================================================== */
+
+:root {
+  --brand:       #0d6efd;
+  --brand-dark:  #084298;
+  --sidebar-bg:  #1a1d24;
+  --sidebar-txt: #c9d1d9;
+  --step-done:   #198754;
+  --step-active: #0d6efd;
+  --step-idle:   #6c757d;
+}
+
+/* ── layout ─────────────────────────────────────────────────────── */
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #f0f2f5;
+  color: #212529;
+}
+
+#sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-txt);
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+#sidebar .brand {
+  padding: 1.25rem 1rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .02em;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+#sidebar .brand span {
+  color: var(--brand);
+}
+
+#sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .65rem 1.1rem;
+  color: var(--sidebar-txt);
+  text-decoration: none;
+  font-size: .93rem;
+  border-left: 3px solid transparent;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+#sidebar nav a.active,
+#sidebar nav a:hover {
+  background: rgba(255,255,255,.06);
+  border-left-color: var(--brand);
+  color: #fff;
+}
+
+#sidebar nav a .badge-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: .7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step-done  .badge-step { background: var(--step-done);   color: #fff; }
+.step-active .badge-step { background: var(--step-active); color: #fff; }
+.step-idle  .badge-step { background: #3a3f4b; color: var(--sidebar-txt); }
+
+#main {
+  margin-left: 220px;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+/* ── cards ───────────────────────────────────────────────────────── */
+
+.card {
+  border: none;
+  border-radius: .75rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+
+.card-header {
+  border-radius: .75rem .75rem 0 0 !important;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+  font-weight: 600;
+}
+
+/* ── drop zone ───────────────────────────────────────────────────── */
+
+#drop-zone {
+  border: 2.5px dashed #adb5bd;
+  border-radius: .75rem;
+  background: #fff;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+
+#drop-zone.drag-over {
+  border-color: var(--brand);
+  background: #e9f2ff;
+}
+
+#drop-zone .drop-icon {
+  font-size: 3rem;
+  color: #adb5bd;
+}
+
+/* ── step sections ───────────────────────────────────────────────── */
+
+.step-section { display: none; }
+.step-section.active { display: block; }
+
+/* ── analysis badges ─────────────────────────────────────────────── */
+
+.region-empty  { background: #e9ecef; color: #6c757d; }
+.region-data   { background: #cfe2ff; color: #084298; }
+.region-mixed  { background: #fff3cd; color: #664d03; }
+.region-code   { background: #f8d7da; color: #842029; }
+
+/* ── table list ──────────────────────────────────────────────────── */
+
+.table-item {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: .5rem;
+  padding: .6rem .9rem;
+  margin-bottom: .4rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  cursor: default;
+}
+
+.table-item .ti-type {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .15rem .45rem;
+  border-radius: .3rem;
+  background: var(--brand);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  flex-shrink: 0;
+}
+
+.table-item .ti-title {
+  flex: 1;
+  font-size: .9rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-item .ti-addr {
+  font-family: monospace;
+  font-size: .8rem;
+  color: #6c757d;
+}
+
+/* ── checksum result ─────────────────────────────────────────────── */
+
+.cs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .35rem 0;
+  border-bottom: 1px solid rgba(0,0,0,.05);
+  font-size: .9rem;
+}
+
+.cs-row:last-child { border: none; }
+.cs-label { color: #6c757d; }
+.cs-val   { font-family: monospace; font-weight: 600; }
+
+/* ── XDF preview ─────────────────────────────────────────────────── */
+
+#xml-preview {
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: .8rem;
+  white-space: pre;
+  overflow: auto;
+  max-height: 420px;
+  background: #1a1d24;
+  color: #abb2bf;
+  border-radius: .5rem;
+  padding: 1rem;
+}
+
+/* ── axis / table suggestion cards ──────────────────────────────── */
+
+.suggest-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: .5rem;
+  padding: .6rem .8rem;
+  font-size: .82rem;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.suggest-card:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(13,110,253,.12);
+}
+
+.suggest-card .addr {
+  font-family: monospace;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* ── misc ────────────────────────────────────────────────────────── */
+
+.btn-xs {
+  padding: .15rem .4rem;
+  font-size: .75rem;
+}
+
+.mono { font-family: monospace; }
+
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+  #main    { margin-left: 0; }
+}

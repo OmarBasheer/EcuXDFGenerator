@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ECU XDF Generator</title>
+
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<div id="sidebar">
+  <div class="brand">
+    <i class="bi bi-cpu-fill me-2" style="color:#0d6efd"></i>ECU <span>XDF</span><br>
+    <small style="font-weight:400;font-size:.75rem;color:#8b949e">Generator</small>
+  </div>
+
+  <nav class="mt-2">
+    <a href="#" id="nav-upload"    class="step-idle active">
+      <span class="badge-step">1</span> Upload
+    </a>
+    <a href="#" id="nav-analyze"   class="step-idle">
+      <span class="badge-step">2</span> Analyze
+    </a>
+    <a href="#" id="nav-configure" class="step-idle">
+      <span class="badge-step">3</span> Configure
+    </a>
+    <a href="#" id="nav-generate"  class="step-idle">
+      <span class="badge-step">4</span> Generate XDF
+    </a>
+    <a href="#" id="nav-checksum"  class="step-idle">
+      <span class="badge-step">5</span> Checksum Tool
+    </a>
+  </nav>
+
+  <div class="mt-auto p-3" style="font-size:.7rem;color:#4a5568;border-top:1px solid rgba(255,255,255,.06)">
+    TunerPro XDF v1.60<br>
+    &copy; EcuXDFGenerator
+  </div>
+</div>
+
+<!-- ── Main content ─────────────────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- Toast container -->
+  <div id="toast-container" style="position:fixed;top:1rem;right:1rem;z-index:9999"></div>
+
+  <!-- ================================================================
+       STEP 1 — Upload
+       ================================================================ -->
+  <div id="step-upload" class="step-section active">
+    <h4 class="mb-1">Upload ECU Binary</h4>
+    <p class="text-muted mb-3 small">Select or drop a <code>.bin</code> ECU ROM file to begin.</p>
+
+    <div id="drop-zone">
+      <div class="drop-icon"><i class="bi bi-file-earmark-binary"></i></div>
+      <p class="mt-2 mb-1 fw-semibold">Drop your <code>.bin</code> file here</p>
+      <p class="text-muted small mb-2">or click to browse</p>
+      <input id="file-input" type="file" accept=".bin" style="display:none">
+      <button class="btn btn-sm btn-outline-primary">Browse…</button>
+    </div>
+
+    <!-- File preview -->
+    <div id="file-preview" class="card mt-3 p-3" style="display:none">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-file-binary fs-3 text-primary"></i>
+        <div>
+          <div class="fw-semibold" id="file-name"></div>
+          <div class="small text-muted" id="file-size"></div>
+        </div>
+        <div class="ms-auto">
+          <button id="btn-analyze" class="btn btn-primary" disabled>
+            <span id="spin-analyze" class="spinner-border spinner-border-sm me-1" style="display:none"></span>
+            Analyze Binary
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4 p-3 bg-light border-0">
+      <p class="mb-1 fw-semibold small"><i class="bi bi-info-circle me-1"></i>Supported ECU formats</p>
+      <ul class="mb-0 small text-muted ps-3">
+        <li>Subaru EJ (WRX / STI) — 512 KB / 1 MB Denso</li>
+        <li>Honda OBD1 / OBD2 — 256 KB / 512 KB</li>
+        <li>Mitsubishi EVO VIII / IX — 1 MB</li>
+        <li>Any generic binary — heuristic analysis</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       STEP 2 — Analyze
+       ================================================================ -->
+  <div id="step-analyze" class="step-section">
+    <h4 class="mb-1">Analysis Results</h4>
+    <p class="text-muted small mb-3">Review what was detected in the binary before configuring the XDF.</p>
+
+    <div class="row g-3">
+
+      <!-- File info -->
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-info-circle me-1"></i>File Info</div>
+          <div class="card-body small">
+            <div class="cs-row"><span class="cs-label">Size</span>      <span class="cs-val" id="a-size"></span></div>
+            <div class="cs-row"><span class="cs-label">MD5</span>       <span class="cs-val mono" id="a-md5"></span></div>
+            <div class="cs-row"><span class="cs-label">SHA-1</span>     <span class="cs-val mono" id="a-sha1"></span></div>
+            <div class="cs-row"><span class="cs-label">Fill byte</span> <span class="cs-val" id="a-fill"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ECU detection -->
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-cpu me-1"></i>ECU Detection</div>
+          <div class="card-body small">
+            <div class="fw-semibold mb-2" id="a-ecu-primary"></div>
+            <div id="a-ecu-suggestions"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory regions -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-grid me-1"></i>Memory Regions (by entropy)</div>
+          <div class="card-body" id="a-regions"></div>
+          <div class="card-footer text-muted small">
+            <span class="badge region-empty me-1">empty</span>
+            <span class="badge region-data me-1">data (tables)</span>
+            <span class="badge region-mixed me-1">mixed</span>
+            <span class="badge region-code">code</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checksum hints -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-shield-check me-1"></i>Checksum Hints</div>
+          <div class="card-body" id="a-checksum-hints" style="max-height:200px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <!-- ASCII signatures -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-fonts me-1"></i>ASCII Strings Found</div>
+          <div class="card-body" id="a-signatures" style="max-height:200px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <!-- Potential axes -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <i class="bi bi-bar-chart-steps me-1"></i>Potential Axis Arrays
+            <small class="text-muted ms-2">click to add</small>
+          </div>
+          <div class="card-body" id="a-axes" style="max-height:260px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <!-- Potential tables -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <i class="bi bi-table me-1"></i>Potential Table Regions
+            <small class="text-muted ms-2">click to add</small>
+          </div>
+          <div class="card-body" id="a-tables" style="max-height:260px;overflow:auto"></div>
+        </div>
+      </div>
+
+    </div><!-- /row -->
+
+    <div class="mt-3 d-flex gap-2">
+      <button class="btn btn-primary" id="btn-to-configure">
+        Continue to Configure <i class="bi bi-arrow-right ms-1"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       STEP 3 — Configure
+       ================================================================ -->
+  <div id="step-configure" class="step-section">
+    <h4 class="mb-1">Configure XDF</h4>
+    <p class="text-muted small mb-3">Define the header and add all tables / parameters to include in the XDF.</p>
+
+    <div class="row g-3">
+
+      <!-- XDF header settings -->
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-card-text me-1"></i>XDF Header</div>
+          <div class="card-body">
+            <div class="mb-2">
+              <label class="form-label small mb-1">ECU Profile</label>
+              <select id="cfg-profile" class="form-select form-select-sm">
+                <option value="">— none / manual —</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">Title</label>
+              <input id="cfg-title" type="text" class="form-control form-control-sm" placeholder="My ECU XDF">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">Author</label>
+              <input id="cfg-author" type="text" class="form-control form-control-sm">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">Description</label>
+              <textarea id="cfg-description" class="form-control form-control-sm" rows="2"></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">Categories (comma-separated)</label>
+              <input id="cfg-categories" type="text" class="form-control form-control-sm"
+                     value="Fuel, Timing, Boost, Idle, Misc">
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small mb-1">Default element size (bits)</label>
+                <select id="cfg-default-size" class="form-select form-select-sm">
+                  <option value="8" selected>8-bit</option>
+                  <option value="16">16-bit</option>
+                  <option value="32">32-bit</option>
+                </select>
+              </div>
+              <div class="col-6 d-flex align-items-end pb-1">
+                <div class="form-check">
+                  <input id="cfg-lsb" type="checkbox" class="form-check-input">
+                  <label class="form-check-label small" for="cfg-lsb">LSB first (little-endian)</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table list -->
+      <div class="col-lg-7">
+        <div class="card h-100">
+          <div class="card-header d-flex align-items-center">
+            <span><i class="bi bi-list-ul me-1"></i>Tables &amp; Parameters</span>
+            <button id="btn-add-table" class="btn btn-sm btn-primary ms-auto">
+              <i class="bi bi-plus-lg me-1"></i>Add
+            </button>
+          </div>
+          <div class="card-body" id="table-list" style="min-height:200px">
+            <p class="text-muted small">No tables defined yet.</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /row -->
+
+    <div class="mt-3">
+      <button class="btn btn-primary" id="btn-to-generate">
+        Preview &amp; Generate XDF <i class="bi bi-arrow-right ms-1"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       STEP 4 — Generate
+       ================================================================ -->
+  <div id="step-generate" class="step-section">
+    <h4 class="mb-1">Generate XDF</h4>
+    <p class="text-muted small mb-3">Preview the generated XML and download your <code>.xdf</code> file.</p>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-code-slash me-1"></i>XDF Preview</span>
+        <button id="btn-refresh-preview" class="btn btn-sm btn-outline-secondary ms-auto">
+          <span id="spin-preview" class="spinner-border spinner-border-sm me-1" style="display:none"></span>
+          Refresh
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <pre id="xml-preview">Click "Refresh" to generate preview…</pre>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center">
+      <button id="btn-download-xdf" class="btn btn-success btn-lg">
+        <span id="spin-download" class="spinner-border spinner-border-sm me-1" style="display:none"></span>
+        <i class="bi bi-download me-1"></i>Download XDF
+      </button>
+      <span class="text-muted small">Compatible with TunerPro RT</span>
+    </div>
+
+    <div class="card mt-4 bg-light border-0 p-3">
+      <p class="mb-1 fw-semibold small"><i class="bi bi-lightbulb me-1 text-warning"></i>Next steps</p>
+      <ol class="mb-0 small text-muted ps-3">
+        <li>Open TunerPro RT and load your ECU binary.</li>
+        <li>Import the downloaded <code>.xdf</code> file (File → Open XDF).</li>
+        <li>Use the <strong>Checksum Tool</strong> (Step 5) if you need to patch / verify the ROM checksum before flashing.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       STEP 5 — Checksum Tool
+       ================================================================ -->
+  <div id="step-checksum" class="step-section">
+    <h4 class="mb-1">Checksum Tool</h4>
+    <p class="text-muted small mb-3">Calculate and optionally patch ECU ROM checksums.</p>
+
+    <div class="row g-3">
+
+      <!-- File upload (re-use or pick new) -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-file-binary me-1"></i>Binary File</div>
+          <div class="card-body">
+            <div id="cs-drop-zone" class="d-flex align-items-center justify-content-center gap-3 p-3"
+                 style="border:2px dashed #adb5bd;border-radius:.5rem;cursor:pointer;min-height:80px">
+              <i class="bi bi-upload fs-4 text-muted"></i>
+              <div>
+                <div class="fw-semibold">Drop or click to load a .bin file</div>
+                <div class="small text-muted">Or use the file already uploaded in Step 1</div>
+              </div>
+              <input id="cs-file-input" type="file" accept=".bin" style="display:none">
+            </div>
+            <div id="cs-file-info" class="mt-2 small text-muted" style="display:none">
+              <i class="bi bi-check-circle-fill text-success me-1"></i><span id="cs-file-name"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="col-md-5">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-sliders me-1"></i>Checksum Settings</div>
+          <div class="card-body">
+            <div class="mb-2">
+              <label class="form-label small mb-1">Algorithm</label>
+              <select id="cs-algorithm" class="form-select form-select-sm">
+                <option value="subaru">Subaru / Denso (32-bit)</option>
+                <option value="honda">Honda OBD (8-bit)</option>
+                <option value="crc32">CRC32</option>
+                <option value="sum32">Sum32</option>
+                <option value="sum16">Sum16</option>
+              </select>
+              <div id="cs-algo-info" class="form-text small text-muted mt-1"></div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label small mb-1">Region start</label>
+                <input id="cs-region-start" type="text" class="form-control form-control-sm mono" value="0x0">
+              </div>
+              <div class="col-6">
+                <label class="form-label small mb-1">Region end (blank = EOF)</label>
+                <input id="cs-region-end" type="text" class="form-control form-control-sm mono" placeholder="auto">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small mb-1">Checksum storage address</label>
+              <input id="cs-storage-addr" type="text" class="form-control form-control-sm mono" value="0x0">
+            </div>
+            <div class="d-flex gap-2">
+              <button id="btn-calc-checksum" class="btn btn-sm btn-outline-primary">
+                <span id="spin-cs-calc" class="spinner-border spinner-border-sm me-1" style="display:none"></span>
+                <i class="bi bi-calculator me-1"></i>Calculate
+              </button>
+              <button id="btn-patch-checksum" class="btn btn-sm btn-warning">
+                <span id="spin-cs-patch" class="spinner-border spinner-border-sm me-1" style="display:none"></span>
+                <i class="bi bi-wrench me-1"></i>Patch &amp; Download
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="col-md-7">
+        <div id="cs-results" class="card" style="display:none">
+          <div class="card-header"><i class="bi bi-table me-1"></i>Checksum Results</div>
+          <div class="card-body" id="cs-result-rows"></div>
+        </div>
+
+        <!-- Reference info -->
+        <div class="card mt-3 bg-light border-0">
+          <div class="card-body p-3 small">
+            <p class="fw-semibold mb-2"><i class="bi bi-book me-1"></i>Algorithm Reference</p>
+            <table class="table table-sm table-borderless mb-0">
+              <thead><tr class="text-muted"><th>ECU</th><th>Algorithm</th><th>Storage</th></tr></thead>
+              <tbody>
+                <tr><td>Subaru WRX/STI</td><td>SUM32 + 0x5AA5A55A</td><td>4 bytes LE @ end of region</td></tr>
+                <tr><td>Honda OBD1/2</td><td>8-bit 2's complement</td><td>1 byte @ end of region</td></tr>
+                <tr><td>Mitsubishi EVO</td><td>CRC32</td><td>4 bytes LE @ end</td></tr>
+                <tr><td>Generic</td><td>SUM32 / CRC32</td><td>Varies</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /row -->
+  </div>
+
+</div><!-- /main -->
+
+
+<!-- ================================================================
+     Add / Edit Table Modal
+     ================================================================ -->
+<div class="modal fade" id="tableModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-square me-2"></i>Add / Edit Table or Parameter</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-index" value="-1">
+        <form id="table-form">
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-4">
+              <label class="form-label small mb-1">Type</label>
+              <select id="t-type" class="form-select form-select-sm">
+                <option value="scalar">Scalar (single value)</option>
+                <option value="1d">1D Table (curve)</option>
+                <option value="2d">2D Table (map)</option>
+                <option value="flag">Bit Flag</option>
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label small mb-1">Title</label>
+              <input id="t-title" type="text" class="form-control form-control-sm" placeholder="e.g. Fuel Map" required>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small mb-1">Description (optional)</label>
+            <input id="t-desc" type="text" class="form-control form-control-sm">
+          </div>
+
+          <!-- Address (scalar / flag / 2D data) -->
+          <div class="row g-2 mb-2" id="row-addr">
+            <div class="col-6">
+              <label class="form-label small mb-1">Data address (hex)</label>
+              <input id="t-addr" type="text" class="form-control form-control-sm mono" placeholder="0x1234">
+            </div>
+            <div class="col-3">
+              <label class="form-label small mb-1">Element size (bits)</label>
+              <select id="t-size" class="form-select form-select-sm">
+                <option value="8" selected>8</option>
+                <option value="16">16</option>
+                <option value="32">32</option>
+              </select>
+            </div>
+            <div class="col-3 d-flex align-items-end pb-1">
+              <div>
+                <div class="form-check mb-0">
+                  <input id="t-signed" type="checkbox" class="form-check-input">
+                  <label class="form-check-label small" for="t-signed">Signed</label>
+                </div>
+                <div class="form-check mb-0">
+                  <input id="t-lsb" type="checkbox" class="form-check-input">
+                  <label class="form-check-label small" for="t-lsb">LSB first</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- X axis address (1D / 2D) -->
+          <div class="row g-2 mb-2" id="row-x-addr" style="display:none">
+            <div class="col-6">
+              <label class="form-label small mb-1">X-axis address (hex)</label>
+              <input id="t-x-addr" type="text" class="form-control form-control-sm mono" placeholder="0x1000">
+            </div>
+            <div class="col-3" id="row-x-size">
+              <label class="form-label small mb-1">X element size</label>
+              <select id="t-x-size" class="form-select form-select-sm">
+                <option value="8" selected>8-bit</option>
+                <option value="16">16-bit</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Y axis address (2D only) -->
+          <div class="row g-2 mb-2" id="row-y-addr" style="display:none">
+            <div class="col-6">
+              <label class="form-label small mb-1">Y-axis address (hex)</label>
+              <input id="t-y-addr" type="text" class="form-control form-control-sm mono" placeholder="0x1010">
+            </div>
+          </div>
+
+          <!-- Count (1D) -->
+          <div class="row g-2 mb-2" id="row-count" style="display:none">
+            <div class="col-4">
+              <label class="form-label small mb-1">Element count</label>
+              <input id="t-count" type="number" class="form-control form-control-sm" value="16" min="1" max="256">
+            </div>
+          </div>
+
+          <!-- Rows / Cols (2D) -->
+          <div class="row g-2 mb-2" id="row-dims" style="display:none">
+            <div class="col-3">
+              <label class="form-label small mb-1">Rows</label>
+              <input id="t-rows" type="number" class="form-control form-control-sm" value="16" min="1" max="64">
+            </div>
+            <div class="col-3">
+              <label class="form-label small mb-1">Columns</label>
+              <input id="t-cols" type="number" class="form-control form-control-sm" value="16" min="1" max="64">
+            </div>
+          </div>
+
+          <!-- Math formulas -->
+          <div class="row g-2 mb-2" id="row-x-math" style="display:none">
+            <div class="col-6">
+              <label class="form-label small mb-1">X-axis formula <span class="text-muted">(e.g. X*0.5)</span></label>
+              <input id="t-x-math" type="text" class="form-control form-control-sm mono" value="X">
+            </div>
+          </div>
+          <div class="row g-2 mb-2" id="row-y-math" style="display:none">
+            <div class="col-6">
+              <label class="form-label small mb-1">Y-axis formula</label>
+              <input id="t-y-math" type="text" class="form-control form-control-sm mono" value="X">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2" id="row-units">
+            <div class="col-4">
+              <label class="form-label small mb-1">Data units</label>
+              <input id="t-units" type="text" class="form-control form-control-sm" placeholder="e.g. ms, rpm, %">
+            </div>
+            <div class="col-8">
+              <label class="form-label small mb-1">Data formula <span class="text-muted">(e.g. X*0.01)</span></label>
+              <input id="t-math" type="text" class="form-control form-control-sm mono" value="X">
+            </div>
+          </div>
+
+          <!-- Mask (flag) -->
+          <div class="row g-2 mb-2" id="row-mask" style="display:none">
+            <div class="col-4">
+              <label class="form-label small mb-1">Bit mask (hex)</label>
+              <input id="t-mask" type="text" class="form-control form-control-sm mono" value="0x1">
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="btn-save-table" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmk8H5d5Dn50kGBM0VRGLiOmgdT"
+        crossorigin="anonymous"></script>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
